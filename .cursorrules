@@ -1,0 +1,205 @@
+# ========================================
+# Cursor Project Rules (.cursorrules)
+# Project: ts-mail-client
+# Approach: UI-first (Next.js frontend first), Monorepo (includes Node.js backend)
+# ========================================
+
+project:
+  name: ts-mail-client
+  description: >
+    A minimal, modern email client web app with domain management, templates,
+    bulk sending (with or without attachments), and analytics tracking.
+    Built as a monorepo with:
+      - Frontend: Next.js (App Router) + ShadCN UI
+      - Backend: Node.js (Express) + PostgreSQL
+  structure:
+    - /frontend → Next.js + ShadCN UI
+    - /backend  → Node.js (Express + PostgreSQL via pg)
+  deployment:
+    - Frontend → Vercel
+    - Backend  → Render (Node.js service)
+  tech_stack:
+    - Next.js 14 (App Router)
+    - TypeScript
+    - ShadCN UI (dark theme)
+    - Express.js (Node backend)
+    - pg (PostgreSQL driver)
+    - NextAuth.js (email magic link auth)
+    - Nodemailer / SendGrid (email sending)
+    - Chart.js or Recharts (analytics)
+    - Optional: BullMQ / Upstash Queue for background jobs
+
+# ========================================
+# CORE RULES
+# ========================================
+rules:
+  - Use **Next.js** for frontend (App Router) and **Express.js** for backend.
+  - Keep both projects under one repo for easier management (monorepo).
+  - No Prisma or ORM — use `pg` client directly for PostgreSQL queries.
+  - Follow **UI-first** workflow: complete all ShadCN UI screens with mock data before backend.
+  - Use **TypeScript** on both frontend and backend.
+  - Maintain strict folder separation:
+      - `/frontend`: all UI, routes, and components.
+      - `/backend`: all Express routes, services, DB logic.
+      - `/shared`: optional types/interfaces shared between both.
+  - Use environment variables for connection strings (`.env` in backend, `.env.local` in frontend).
+  - All backend endpoints follow REST pattern: `/api/v1/...`.
+  - Use **async/await** for database operations.
+  - Write clean, modular code: controllers → services → db.
+
+# ========================================
+# PHASED PLAN (UI-FIRST MONOREPO)
+# ========================================
+
+phases:
+  - phase: 1
+    title: "🧱 Repo Setup & Initialization"
+    steps:
+      - Create main repo `ts-mail-client/`
+      - Scaffold structure:
+        ```
+        /frontend
+        /backend
+        /shared
+        ```
+      - Initialize both projects:
+        ```
+        cd frontend && npx create-next-app@latest . --typescript --app
+        cd ../backend && npm init -y
+        npm install express cors dotenv pg nodemailer zod
+        npm install -D typescript ts-node-dev @types/node @types/express
+        npx tsc --init
+        ```
+      - Setup root `.gitignore`, `.env.example`, and `README.md`.
+      - Add backend start script in `/backend/package.json`:
+        ```json
+        "scripts": {
+          "dev": "ts-node-dev src/server.ts"
+        }
+        ```
+      - Add base `Dockerfile` later for deployment to Render.
+
+  - phase: 2
+    title: "🎨 Frontend: Base Layout & Navigation (UI-Only)"
+    steps:
+      - Setup ShadCN UI:
+        ```
+        npx shadcn-ui init
+        npm install @radix-ui/react-icons lucide-react
+        ```
+      - Build app layout:
+        - Sidebar + Topbar + Mobile drawer.
+      - Add pages:
+        `/dashboard`, `/domains`, `/templates`, `/campaigns`, `/analytics`, `/settings`
+      - Implement route highlighting and responsive layout.
+      - Add dark mode toggle (default to dark).
+
+  - phase: 3
+    title: "📊 Frontend: Page UIs with Mock Data"
+    steps:
+      - Create `/frontend/lib/mock.ts` for fake data.
+      - `/dashboard`: summary cards + charts (mock data).
+      - `/domains`: table for domains + add/delete modal.
+      - `/templates`: template list + create/edit modals.
+      - `/campaigns`: table of campaigns + create form modal.
+      - `/analytics`: charts showing open/bounce stats.
+      - `/settings`: placeholder for user preferences.
+      - Use ShadCN Skeletons for loading placeholders.
+
+  - phase: 4
+    title: "🗂 Frontend: Reusable Components & UX Polish"
+    steps:
+      - Add `/frontend/components/ui` for reusable UI parts:
+        - Dialogs, Toasts, Pagination, Loaders, SearchBar.
+      - Add breadcrumbs and headers for each page.
+      - Add animations via Framer Motion.
+      - Test responsiveness and dark mode consistency.
+
+  - phase: 5
+    title: "🛠 Backend: Express + PostgreSQL Setup"
+    steps:
+      - In `/backend/src` create structure:
+        ```
+        src/
+          server.ts
+          routes/
+          controllers/
+          services/
+          db/
+        ```
+      - Setup database connection:
+        ```ts
+        // db/index.ts
+        import { Pool } from "pg";
+        export const db = new Pool({ connectionString: process.env.DATABASE_URL });
+        ```
+      - Create initial routes:
+        - `/api/v1/domains`
+        - `/api/v1/templates`
+        - `/api/v1/campaigns`
+        - `/api/v1/analytics`
+      - Implement sample controllers returning mock data.
+      - Test with Postman or curl.
+
+  - phase: 6
+    title: "🧩 Backend: Real Database & Logic"
+    steps:
+      - Create tables manually or with SQL migrations (e.g. `db/schema.sql`):
+        - users
+        - domains
+        - templates
+        - campaigns
+        - email_logs
+      - Add CRUD operations in `services/` using raw SQL via `db.query()`.
+      - Implement `mailer.ts` with Nodemailer / SendGrid.
+      - Create `/api/v1/send` route for sending emails.
+      - Store logs in `email_logs`.
+      - Handle attachments via multer or Supabase upload.
+
+  - phase: 7
+    title: "🔗 Frontend + Backend Integration"
+    steps:
+      - Replace mock data with live API calls (`NEXT_PUBLIC_API_URL`).
+      - Connect CRUD actions (domains, templates, campaigns).
+      - Integrate email sending + analytics view.
+      - Add loading/error/success states.
+      - Add auth later with NextAuth (magic link) if needed.
+
+  - phase: 8
+    title: "🚀 Optimization & Deployment"
+    steps:
+      - Add Zod validation for all backend requests.
+      - Add error handling middleware in Express.
+      - Add rate limiting and CORS rules.
+      - Optimize backend response times.
+      - Deploy frontend to Vercel.
+      - Deploy backend to Render.
+      - Update `.env` and docs for production setup.
+
+# ========================================
+# DEVELOPMENT STYLE
+# ========================================
+dev_guidelines:
+  - Keep UI modular, minimal, and consistent with ShadCN.
+  - Commit per phase or feature (`feat(ui): dashboard mock`, `feat(api): domains route`).
+  - Keep code clean — no inline SQL inside controllers (use service files).
+  - Backend routes start with `/api/v1`.
+  - All queries must use parameterized SQL (`$1, $2`) for security.
+  - Type all functions strictly (no any).
+  - Use `.env` variables for sensitive configs.
+  - Comment database logic and complex queries clearly.
+
+# ========================================
+# OUTPUT STYLE
+# ========================================
+cursor_output_style:
+  - Concise, production-ready TypeScript for both frontend and backend.
+  - Frontend: Functional components with hooks + Tailwind layout.
+  - Backend: Express routers + modular services using `pg`.
+  - ShadCN components for all UI (dark theme default).
+  - Clean imports with `@/` aliases.
+  - Code must be runnable as-is.
+
+# ========================================
+# END
+# ========================================

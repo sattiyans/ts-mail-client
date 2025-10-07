@@ -1,0 +1,23 @@
+{
+  "name": "ts-mail-client",
+  "version": "1.0.0",
+  "description": "A minimal, modern email client web app with domain management, templates, bulk sending, and analytics tracking.",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm run start",
+    "deploy": "cd frontend && vercel --prod",
+    "deploy:preview": "cd frontend && vercel"
+  },
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

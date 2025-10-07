@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Send, Play, Pause, MoreHorizontal, Eye, Edit, Copy, Trash2 } from "lucide-react";
+import { Plus, Send, Play, Pause, MoreHorizontal, Eye, Edit, Copy } from "lucide-react";
 import { mockCampaigns } from "@/lib/mock-data";
 
 export default function CampaignsPage() {
@@ -50,12 +50,12 @@ export default function CampaignsPage() {
     });
   };
 
-  const calculateOpenRate = (campaign: any) => {
+  const calculateOpenRate = (campaign: { metrics: { delivered: number; opened: number } }) => {
     if (campaign.metrics.delivered === 0) return "0";
     return ((campaign.metrics.opened / campaign.metrics.delivered) * 100).toFixed(1);
   };
 
-  const calculateClickRate = (campaign: any) => {
+  const calculateClickRate = (campaign: { metrics: { delivered: number; clicked: number } }) => {
     if (campaign.metrics.delivered === 0) return "0";
     return ((campaign.metrics.clicked / campaign.metrics.delivered) * 100).toFixed(1);
   };

@@ -15,7 +15,7 @@ import { useToast } from "@/lib/use-toast";
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { setLoading, setLoadingMessage } = useLoading();
+  const { setLoadingMessage } = useLoading();
   const toast = useToast();
 
   // Simulate initial data loading
@@ -45,7 +45,7 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h2>
             <p className="text-muted-foreground">
-              Welcome back! Here's what's happening with your campaigns.
+              Welcome back! Here&apos;s what&apos;s happening with your campaigns.
             </p>
           </div>
           <Button 
@@ -183,7 +183,7 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h2>
           <p className="text-muted-foreground">
-            Welcome back! Here's what's happening with your campaigns.
+            Welcome back! Here&apos;s what&apos;s happening with your campaigns.
           </p>
         </div>
         <Button 

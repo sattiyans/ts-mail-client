@@ -204,7 +204,7 @@ export default function DomainsPage() {
             <div className="space-y-2">
               <h4 className="font-medium">1. SPF Record</h4>
               <p className="text-sm text-muted-foreground">
-                Add this TXT record to your domain's DNS settings:
+                Add this TXT record to your domain&apos;s DNS settings:
               </p>
               <div className="bg-muted p-3 rounded-md font-mono text-sm">
                 v=spf1 include:_spf.google.com ~all
@@ -214,7 +214,7 @@ export default function DomainsPage() {
             <div className="space-y-2">
               <h4 className="font-medium">2. DKIM Record</h4>
               <p className="text-sm text-muted-foreground">
-                Add this CNAME record to your domain's DNS settings:
+                Add this CNAME record to your domain&apos;s DNS settings:
               </p>
               <div className="bg-muted p-3 rounded-md font-mono text-sm">
                 mail._domainkey → mail.google.com
@@ -224,7 +224,7 @@ export default function DomainsPage() {
             <div className="space-y-2">
               <h4 className="font-medium">3. DMARC Record</h4>
               <p className="text-sm text-muted-foreground">
-                Add this TXT record to your domain's DNS settings:
+                Add this TXT record to your domain&apos;s DNS settings:
               </p>
               <div className="bg-muted p-3 rounded-md font-mono text-sm">
                 v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com

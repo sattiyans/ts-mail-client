@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "TS Mail Client",
-  description: "A minimal, modern email client web app with domain management, email templates, bulk sending, and analytics",
+  description: "A minimal, modern email client web app with domain management, email templates, bulk sending, and analytics - Auto-deployment test",
 };
 
 export default function RootLayout({

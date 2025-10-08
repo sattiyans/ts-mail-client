@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Plus, Send, Play, Pause, MoreHorizontal, Eye, Edit, Copy } from "lucide-react";
 import { CreateCampaignModal } from "@/components/campaigns/create-campaign-modal";
 import { getJSON } from "@/lib/api";
+import { useEffect, useState } from "react";
 
 type ApiCampaign = {
   id: string;
@@ -19,11 +22,11 @@ type ApiCampaign = {
 };
 
 export default function CampaignsPage() {
-  const [items, setItems] = (require("react") as typeof import("react")).useState<ApiCampaign[]>([]);
-  const [loading, setLoading] = (require("react") as typeof import("react")).useState(true);
-  const [error, setError] = (require("react") as typeof import("react")).useState<string | null>(null);
+  const [items, setItems] = useState<ApiCampaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  (require("react") as typeof import("react")).useEffect(() => {
+  useEffect(() => {
     let active = true;
     (async () => {
       try {

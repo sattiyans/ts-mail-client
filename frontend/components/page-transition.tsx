@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
 interface PageTransitionProps {
@@ -10,22 +10,23 @@ interface PageTransitionProps {
 export function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname();
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const firstRenderRef = useRef(true);
 
   useEffect(() => {
+    // Skip animation on first render to avoid initial flicker
+    if (firstRenderRef.current) {
+      firstRenderRef.current = false;
+      return;
+    }
     setIsTransitioning(true);
-    const timer = setTimeout(() => {
-      setIsTransitioning(false);
-    }, 150);
-
+    const timer = setTimeout(() => setIsTransitioning(false), 120);
     return () => clearTimeout(timer);
   }, [pathname]);
 
   return (
     <div
-      className={`transition-all duration-150 ease-in-out ${
-        isTransitioning
-          ? "opacity-0 translate-y-2"
-          : "opacity-100 translate-y-0"
+      className={`transition-transform duration-120 ease-out will-change-transform ${
+        isTransitioning ? "translate-y-1" : "translate-y-0"
       }`}
     >
       {children}

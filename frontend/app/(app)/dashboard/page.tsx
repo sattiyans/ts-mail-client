@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Chart } from "@/components/chart";
 import { DashboardCardSkeleton, ChartSkeleton, CampaignSkeleton } from "@/components/skeletons";
 import { Mail, Send, Users, TrendingUp, Clock, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
-import { mockAnalytics, mockCampaigns } from "@/lib/mock-data";
+import { getJSON } from "@/lib/api";
 import { useLoading } from "@/lib/loading-context";
 import { useToast } from "@/lib/use-toast";
 
@@ -17,23 +17,32 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { setLoadingMessage } = useLoading();
   const toast = useToast();
+  const [items, setItems] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  // Simulate initial data loading
+  // Load campaigns for dashboard
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
+    let active = true;
+    (async () => {
+      try {
+        const res = await getJSON<{ items: any[] }>("/api/v1/campaigns");
+        if (active) setItems(res.items || []);
+      } catch (e: any) {
+        if (active) setError(e?.message || "Failed to load dashboard data");
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    })();
+    return () => { active = false; };
   }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     setLoadingMessage("Refreshing dashboard data...");
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
+    try {
+      const res = await getJSON<{ items: any[] }>("/api/v1/campaigns");
+      setItems(res.items || []);
+    } catch {}
     setIsRefreshing(false);
     toast.success("Dashboard refreshed successfully");
   };
@@ -111,24 +120,13 @@ export default function DashboardPage() {
   }
 
   // Chart data for email performance over time
+  // Placeholder until backend provides timeseries
   const emailPerformanceData = {
-    labels: mockAnalytics.monthlyStats.map(stat => stat.month),
+    labels: ["Jan","Feb","Mar","Apr","May","Jun","Jul"],
     datasets: [
-      {
-        label: 'Emails Sent',
-        data: mockAnalytics.monthlyStats.map(stat => stat.emails),
-        tension: 0.4,
-      },
-      {
-        label: 'Opens',
-        data: mockAnalytics.monthlyStats.map(stat => stat.opens),
-        tension: 0.4,
-      },
-      {
-        label: 'Clicks',
-        data: mockAnalytics.monthlyStats.map(stat => stat.clicks),
-        tension: 0.4,
-      },
+      { label: 'Emails Sent', data: [0,0,0,0,0,0,0], tension: 0.4 },
+      { label: 'Opens', data: [0,0,0,0,0,0,0], tension: 0.4 },
+      { label: 'Clicks', data: [0,0,0,0,0,0,0], tension: 0.4 },
     ],
   };
 
@@ -138,10 +136,10 @@ export default function DashboardPage() {
     datasets: [
       {
         data: [
-          mockCampaigns.filter(c => c.status === 'sent').length,
-          mockCampaigns.filter(c => c.status === 'scheduled').length,
-          mockCampaigns.filter(c => c.status === 'draft').length,
-          mockCampaigns.filter(c => c.status === 'paused').length,
+          items.filter(c => c.status === 'sent').length,
+          items.filter(c => c.status === 'scheduled').length,
+          items.filter(c => c.status === 'draft').length,
+          items.filter(c => c.status === 'paused').length,
         ],
       },
     ],
@@ -205,7 +203,7 @@ export default function DashboardPage() {
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockAnalytics.totalEmails.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{items.reduce((s, c) => s + (c.metrics?.delivered ?? 0), 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
               +20.1% from last month
             </p>
@@ -218,7 +216,7 @@ export default function DashboardPage() {
             <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockAnalytics.totalCampaigns}</div>
+            <div className="text-2xl font-bold">{items.length}</div>
             <p className="text-xs text-muted-foreground">
               {mockCampaigns.filter(c => c.status === 'sent').length} sent this month
             </p>
@@ -231,7 +229,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockAnalytics.totalSubscribers.toLocaleString()}</div>
+            <div className="text-2xl font-bold">0</div>
             <p className="text-xs text-muted-foreground">
               +180 new subscribers
             </p>
@@ -244,7 +242,12 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold break-words overflow-hidden">{mockAnalytics.openRate}%</div>
+            <div className="text-2xl font-bold break-words overflow-hidden">{(() => {
+              const delivered = items.reduce((s, c) => s + (c.metrics?.delivered ?? 0), 0);
+              const opened = items.reduce((s, c) => s + (c.metrics?.opened ?? 0), 0);
+              if (delivered === 0) return '0';
+              return ((opened / delivered) * 100).toFixed(1);
+            })()}%</div>
             <p className="text-xs text-muted-foreground">
               +2.1% from last month
             </p>
@@ -280,7 +283,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockCampaigns.slice(0, 3).map((campaign) => (
+              {items.slice(0, 3).map((campaign) => (
                 <div key={campaign.id} className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     {getStatusIcon(campaign.status)}
@@ -289,19 +292,19 @@ export default function DashboardPage() {
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium">{campaign.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {campaign.recipients.toLocaleString()} recipients
+                      {(campaign.recipients ?? 0).toLocaleString()} recipients
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium">
-                      {campaign.metrics.delivered > 0 
-                        ? `${((campaign.metrics.opened / campaign.metrics.delivered) * 100).toFixed(1)}%`
+                      {(campaign.metrics?.delivered ?? 0) > 0 
+                        ? `${(((campaign.metrics?.opened ?? 0) / (campaign.metrics?.delivered ?? 1)) * 100).toFixed(1)}%`
                         : '0%'
                       } open rate
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {campaign.sentAt 
-                        ? new Date(campaign.sentAt).toLocaleDateString()
+                      {(campaign as any).sentAt 
+                        ? new Date((campaign as any).sentAt).toLocaleDateString()
                         : 'Not sent'
                       }
                     </p>
@@ -323,33 +326,53 @@ export default function DashboardPage() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Open Rate</span>
-                <span>{mockAnalytics.openRate}%</span>
+                <span>{(() => {
+                  const delivered = items.reduce((s, c) => s + (c.metrics?.delivered ?? 0), 0);
+                  const opened = items.reduce((s, c) => s + (c.metrics?.opened ?? 0), 0);
+                  if (delivered === 0) return '0';
+                  return ((opened / delivered) * 100).toFixed(1);
+                })()}%</span>
               </div>
-              <Progress value={mockAnalytics.openRate} className="h-2" />
+              <Progress value={parseFloat((() => {
+                const delivered = items.reduce((s, c) => s + (c.metrics?.delivered ?? 0), 0);
+                const opened = items.reduce((s, c) => s + (c.metrics?.opened ?? 0), 0);
+                if (delivered === 0) return '0';
+                return ((opened / delivered) * 100).toFixed(1);
+              })())} className="h-2" />
             </div>
             
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Click Rate</span>
-                <span>{mockAnalytics.clickRate}%</span>
+                <span>{(() => {
+                  const delivered = items.reduce((s, c) => s + (c.metrics?.delivered ?? 0), 0);
+                  const clicked = items.reduce((s, c) => s + (c.metrics?.clicked ?? 0), 0);
+                  if (delivered === 0) return '0';
+                  return ((clicked / delivered) * 100).toFixed(1);
+                })()}%</span>
               </div>
-              <Progress value={mockAnalytics.clickRate} className="h-2" />
+              <Progress value={parseFloat((() => {
+                const delivered = items.reduce((s, c) => s + (c.metrics?.delivered ?? 0), 0);
+                const clicked = items.reduce((s, c) => s + (c.metrics?.clicked ?? 0), 0);
+                if (delivered === 0) return '0';
+                return ((clicked / delivered) * 100).toFixed(1);
+              })())} className="h-2" />
             </div>
             
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Bounce Rate</span>
-                <span>{mockAnalytics.bounceRate}%</span>
+                <span>0%</span>
               </div>
-              <Progress value={mockAnalytics.bounceRate} className="h-2" />
+              <Progress value={0} className="h-2" />
             </div>
             
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Unsubscribe Rate</span>
-                <span>{mockAnalytics.unsubscribeRate}%</span>
+                <span>0%</span>
               </div>
-              <Progress value={mockAnalytics.unsubscribeRate} className="h-2" />
+              <Progress value={0} className="h-2" />
             </div>
           </CardContent>
         </Card>
@@ -365,7 +388,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {mockAnalytics.topCampaigns.map((campaign, index) => (
+            {items.slice(0, 3).map((campaign, index) => (
               <div key={campaign.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-medium">
@@ -379,10 +402,16 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium">{campaign.openRate}% open rate</p>
-                  <p className="text-sm text-muted-foreground">
-                    {campaign.clickRate}% click rate
-                  </p>
+                  <p className="font-medium">{(() => {
+                    const d = campaign.metrics?.delivered ?? 0;
+                    const o = campaign.metrics?.opened ?? 0;
+                    return d === 0 ? '0' : ((o / d) * 100).toFixed(1);
+                  })()}% open rate</p>
+                  <p className="text-sm text-muted-foreground">{(() => {
+                    const d = campaign.metrics?.delivered ?? 0;
+                    const c = campaign.metrics?.clicked ?? 0;
+                    return d === 0 ? '0' : ((c / d) * 100).toFixed(1);
+                  })()}% click rate</p>
                 </div>
               </div>
             ))}

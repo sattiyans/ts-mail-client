@@ -5,9 +5,40 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { Plus, Send, Play, Pause, MoreHorizontal, Eye, Edit, Copy } from "lucide-react";
 import { CreateCampaignModal } from "@/components/campaigns/create-campaign-modal";
-import { mockCampaigns } from "@/lib/mock-data";
+import { getJSON } from "@/lib/api";
+
+type ApiCampaign = {
+  id: string;
+  name: string;
+  subject: string;
+  status: string;
+  scheduledAt?: string | null;
+  createdAt?: string;
+  recipients?: number;
+  metrics?: { delivered: number; opened: number; clicked: number };
+};
 
 export default function CampaignsPage() {
+  const [items, setItems] = (require("react") as typeof import("react")).useState<ApiCampaign[]>([]);
+  const [loading, setLoading] = (require("react") as typeof import("react")).useState(true);
+  const [error, setError] = (require("react") as typeof import("react")).useState<string | null>(null);
+
+  (require("react") as typeof import("react")).useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await getJSON<{ items: ApiCampaign[] }>("/api/v1/campaigns");
+        if (active) setItems(res.items || []);
+      } catch (e: any) {
+        if (active) setError(e?.message || "Failed to load campaigns");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'sent':
@@ -88,9 +119,9 @@ export default function CampaignsPage() {
             <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockCampaigns.length}</div>
+            <div className="text-2xl font-bold">{items.length}</div>
             <p className="text-xs text-muted-foreground">
-              {mockCampaigns.filter(c => c.status === 'sent').length} sent
+              {items.filter(c => c.status === 'sent').length} sent
             </p>
           </CardContent>
         </Card>
@@ -117,12 +148,13 @@ export default function CampaignsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold break-words overflow-hidden">
-              {(
-                mockCampaigns
-                  .filter(c => c.status === 'sent')
-                  .reduce((sum, c) => sum + parseFloat(calculateOpenRate(c)), 0) / 
-                mockCampaigns.filter(c => c.status === 'sent').length || 0
-              ).toFixed(1)}%
+              {(() => {
+                const sent = items.filter((c) => c.status === 'sent');
+                if (sent.length === 0) return '0.0';
+                // If metrics not present from API yet, default 0
+                const avg = sent.reduce((sum, c) => sum + parseFloat(calculateOpenRate((c as any))), 0) / sent.length;
+                return avg.toFixed(1);
+              })()}%
             </div>
             <p className="text-xs text-muted-foreground">
               Industry avg: 21.3%
@@ -137,12 +169,12 @@ export default function CampaignsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold break-words overflow-hidden">
-              {(
-                mockCampaigns
-                  .filter(c => c.status === 'sent')
-                  .reduce((sum, c) => sum + parseFloat(calculateClickRate(c)), 0) / 
-                mockCampaigns.filter(c => c.status === 'sent').length || 0
-              ).toFixed(1)}%
+              {(() => {
+                const sent = items.filter((c) => c.status === 'sent');
+                if (sent.length === 0) return '0.0';
+                const avg = sent.reduce((sum, c) => sum + parseFloat(calculateClickRate((c as any))), 0) / sent.length;
+                return avg.toFixed(1);
+              })()}%
             </div>
             <p className="text-xs text-muted-foreground">
               Industry avg: 2.6%
@@ -173,7 +205,21 @@ export default function CampaignsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockCampaigns.map((campaign) => (
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <div className="text-sm text-muted-foreground">Loading campaigns...</div>
+                  </TableCell>
+                </TableRow>
+              )}
+              {error && !loading && (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <div className="text-sm text-destructive">{error}</div>
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && !error && items.map((campaign) => (
                 <TableRow key={campaign.id}>
                   <TableCell>
                     <div>
@@ -189,20 +235,20 @@ export default function CampaignsPage() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <p className="font-medium">{campaign.recipients.toLocaleString()}</p>
+                      <p className="font-medium">{(campaign.recipients ?? 0).toLocaleString()}</p>
                       <p className="text-muted-foreground">
-                        {campaign.metrics.delivered.toLocaleString()} delivered
+                        {(campaign.metrics?.delivered ?? 0).toLocaleString()} delivered
                       </p>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span>{calculateOpenRate(campaign)}%</span>
-                        <span>{campaign.metrics.opened.toLocaleString()}</span>
+                        <span>{calculateOpenRate((campaign as any))}%</span>
+                        <span>{(campaign.metrics?.opened ?? 0).toLocaleString()}</span>
                       </div>
                       <Progress 
-                        value={parseFloat(calculateOpenRate(campaign))} 
+                        value={parseFloat(calculateOpenRate((campaign as any)))} 
                         className="h-2 w-20" 
                       />
                     </div>
@@ -210,19 +256,19 @@ export default function CampaignsPage() {
                   <TableCell>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span>{calculateClickRate(campaign)}%</span>
-                        <span>{campaign.metrics.clicked.toLocaleString()}</span>
+                        <span>{calculateClickRate((campaign as any))}%</span>
+                        <span>{(campaign.metrics?.clicked ?? 0).toLocaleString()}</span>
                       </div>
                       <Progress 
-                        value={parseFloat(calculateClickRate(campaign))} 
+                        value={parseFloat(calculateClickRate((campaign as any)))} 
                         className="h-2 w-20" 
                       />
                     </div>
                   </TableCell>
                   <TableCell>
-                    {campaign.sentAt ? (
+                    {(campaign as any).sentAt ? (
                       <span className="text-sm text-muted-foreground">
-                        {formatDate(campaign.sentAt)}
+                        {formatDate((campaign as any).sentAt)}
                       </span>
                     ) : campaign.scheduledAt ? (
                       <span className="text-sm text-blue-600">

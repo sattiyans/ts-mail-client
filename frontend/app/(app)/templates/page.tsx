@@ -5,10 +5,31 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, FileText, Edit, Copy, Eye, Trash2, Calendar } from "lucide-react";
-import { mockTemplates } from "@/lib/mock-data";
 import { TemplateEditor } from "@/components/template-editor";
+import { useEffect, useState } from "react";
+import { getJSON } from "@/lib/api";
+
+type ApiTemplate = { id: string; name: string; subject: string; content: string; variables: string[]; created_at?: string };
 
 export default function TemplatesPage() {
+  const [templates, setTemplates] = useState<ApiTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await getJSON<{ items: ApiTemplate[] }>("/api/v1/templates");
+        if (active) setTemplates(res.items || []);
+      } catch (e: any) {
+        if (active) setError(e?.message || "Failed to load templates");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
   const getCategoryBadge = (category: string) => {
     const variants = {
       welcome: 'default',
@@ -32,9 +53,28 @@ export default function TemplatesPage() {
     });
   };
 
-  const handleSaveTemplate = (template: any) => {
-    console.log('Saving template:', template);
-    // In a real app, this would save to the database
+  const handleSaveTemplate = async (template: any) => {
+    try {
+      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/v1/templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: template.name,
+          subject: template.subject,
+          content: template.content,
+          variables: template.variables || [],
+        }),
+      });
+      if (resp.ok) {
+        const created = await resp.json();
+        setTemplates((prev) => [created, ...prev]);
+      } else {
+        // fallback add locally
+        setTemplates((prev) => [{ id: Date.now().toString(), ...template }, ...prev]);
+      }
+    } catch {
+      setTemplates((prev) => [{ id: Date.now().toString(), ...template }, ...prev]);
+    }
   };
 
   return (
@@ -62,9 +102,10 @@ export default function TemplatesPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockTemplates.length}</div>
+            <div className="text-2xl font-bold">{templates.length}</div>
             <p className="text-xs text-muted-foreground">
-              {mockTemplates.filter(t => t.lastUsed).length} used recently
+              {/* Backend doesn't provide lastUsed yet */}
+              0 used recently
             </p>
           </CardContent>
         </Card>
@@ -76,7 +117,8 @@ export default function TemplatesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {mockTemplates.filter(t => t.category === 'welcome').length}
+              {/* Category not in backend yet */}
+              0
             </div>
             <p className="text-xs text-muted-foreground">
               Onboarding templates
@@ -91,7 +133,7 @@ export default function TemplatesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {mockTemplates.filter(t => t.category === 'newsletter').length}
+              0
             </div>
             <p className="text-xs text-muted-foreground">
               Regular updates
@@ -106,7 +148,7 @@ export default function TemplatesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {mockTemplates.filter(t => t.category === 'promotional').length}
+              0
             </div>
             <p className="text-xs text-muted-foreground">
               Marketing campaigns
@@ -137,7 +179,21 @@ export default function TemplatesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockTemplates.map((template) => (
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <div className="text-sm text-muted-foreground">Loading templates...</div>
+                  </TableCell>
+                </TableRow>
+              )}
+              {error && !loading && (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <div className="text-sm text-destructive">{error}</div>
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && !error && templates.map((template) => (
                 <TableRow key={template.id}>
                   <TableCell>
                     <div className="flex items-center space-x-2">
@@ -151,7 +207,7 @@ export default function TemplatesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {getCategoryBadge(template.category)}
+                    <span className="text-sm text-muted-foreground">—</span>
                   </TableCell>
                   <TableCell>
                     <div className="max-w-[200px]">
@@ -173,11 +229,11 @@ export default function TemplatesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {template.lastUsed ? (
+                    {false ? (
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">
-                          {formatDate(template.lastUsed)}
+                          {""}
                         </span>
                       </div>
                     ) : (
@@ -186,12 +242,12 @@ export default function TemplatesPage() {
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground">
-                      {formatDate(template.createdAt)}
+                      {formatDate((template as any).created_at || new Date().toISOString())}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end space-x-1">
-                      <TemplateEditor template={template} onSave={handleSaveTemplate}>
+                      <TemplateEditor template={template as any} onSave={handleSaveTemplate}>
                         <Button variant="ghost" size="sm">
                           <Edit className="h-4 w-4" />
                         </Button>

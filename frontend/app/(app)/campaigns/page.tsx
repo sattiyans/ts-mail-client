@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Plus, Send, Play, Pause, MoreHorizontal, Eye, Edit, Copy } from "lucide-react";
+import { CreateCampaignModal } from "@/components/campaigns/create-campaign-modal";
 import { mockCampaigns } from "@/lib/mock-data";
 
 export default function CampaignsPage() {
@@ -69,10 +70,14 @@ export default function CampaignsPage() {
                 Create and manage your email campaigns
               </p>
             </div>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Campaign
-            </Button>
+            <CreateCampaignModal
+              trigger={(
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Campaign
+                </Button>
+              )}
+            />
           </div>
 
       {/* Summary Cards */}

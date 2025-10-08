@@ -136,7 +136,7 @@ export default function CampaignsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockCampaigns.reduce((sum, c) => sum + c.recipients, 0).toLocaleString()}
+              {items.reduce((sum, c) => sum + (c.recipients ?? 0), 0).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
               Across all campaigns

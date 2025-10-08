@@ -218,7 +218,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{items.length}</div>
             <p className="text-xs text-muted-foreground">
-              {mockCampaigns.filter(c => c.status === 'sent').length} sent this month
+              {items.filter(c => c.status === 'sent').length} sent this month
             </p>
           </CardContent>
         </Card>

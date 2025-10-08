@@ -23,16 +23,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {/* Apply saved theme before hydration to prevent flash */}
+    <html lang="en">
+      <head>
+        {/* Apply saved theme ASAP (before hydration) to prevent flash + mismatch */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(() => { try { const saved = localStorage.getItem('theme'); const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; const isDark = saved ? saved === 'dark' : prefersDark; document.documentElement.classList.toggle('dark', isDark); } catch (_) {} })();`,
+            __html: `!function(){try{var s=localStorage.getItem('theme'),p=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches,d=s?s==='dark':p;var e=document.documentElement.classList;e.toggle('dark',d)}catch(e){}}();`,
           }}
         />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
       </body>
     </html>

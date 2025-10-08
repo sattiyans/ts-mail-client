@@ -27,6 +27,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* Apply saved theme before hydration to prevent flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => { try { const saved = localStorage.getItem('theme'); const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; const isDark = saved ? saved === 'dark' : prefersDark; document.documentElement.classList.toggle('dark', isDark); } catch (_) {} })();`,
+          }}
+        />
         {children}
       </body>
     </html>

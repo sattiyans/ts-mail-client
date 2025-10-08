@@ -139,6 +139,13 @@
   }
 }
 
+/* Disable transitions briefly when toggling theme to avoid multi-region flicker */
+.no-transition *,
+.no-transition *::before,
+.no-transition *::after {
+  transition: none !important;
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);

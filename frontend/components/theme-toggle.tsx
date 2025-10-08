@@ -21,6 +21,8 @@ export function ThemeToggle() {
   }, []);
 
   const toggleTheme = () => {
+    // Temporarily disable transitions to avoid flicker between regions
+    document.documentElement.classList.add('no-transition');
     const newTheme = !isDark;
     setIsDark(newTheme);
     
@@ -31,6 +33,10 @@ export function ThemeToggle() {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
+    // Re-enable transitions shortly after
+    setTimeout(() => {
+      document.documentElement.classList.remove('no-transition');
+    }, 120);
   };
 
   return (

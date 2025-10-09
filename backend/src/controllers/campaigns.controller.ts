@@ -29,7 +29,11 @@ export async function createCampaign(req: Request, res: Response) {
 }
 
 export async function getCampaignById(req: Request, res: Response) {
-  const { id } = req.params as { id: string };
+  const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ error: "MISSING_ID" });
+  }
+  
   const item = await getCampaignByIdSvc(id);
   if (!item) return res.status(404).json({ error: "NOT_FOUND" });
   return res.json(item);

@@ -75,6 +75,9 @@ export async function login(req: Request, res: Response) {
 export async function getProfile(req: Request, res: Response) {
   // In a real app, this would get user from JWT token
   const { userId } = req.params;
+  if (!userId) {
+    return res.status(400).json({ error: "MISSING_USER_ID" });
+  }
   
   try {
     const user = await getUserByIdSvc(userId);
@@ -95,6 +98,10 @@ const UpdateProfileSchema = z.object({
 
 export async function updateProfile(req: Request, res: Response) {
   const { userId } = req.params;
+  if (!userId) {
+    return res.status(400).json({ error: "MISSING_USER_ID" });
+  }
+  
   const parsed = UpdateProfileSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "INVALID_BODY", issues: parsed.error.flatten() });

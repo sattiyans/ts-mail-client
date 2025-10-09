@@ -30,6 +30,10 @@ export async function createDomain(req: Request, res: Response) {
 
 export async function getDomain(req: Request, res: Response) {
   const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ error: "MISSING_ID" });
+  }
+  
   const domain = await getDomainByIdSvc(id);
   if (!domain) {
     return res.status(404).json({ error: "NOT_FOUND" });
@@ -44,6 +48,10 @@ const UpdateDomainStatusSchema = z.object({
 
 export async function updateDomainStatus(req: Request, res: Response) {
   const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ error: "MISSING_ID" });
+  }
+  
   const parsed = UpdateDomainStatusSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "INVALID_BODY", issues: parsed.error.flatten() });
@@ -58,6 +66,10 @@ export async function updateDomainStatus(req: Request, res: Response) {
 
 export async function deleteDomain(req: Request, res: Response) {
   const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ error: "MISSING_ID" });
+  }
+  
   await deleteDomainSvc(id);
   return res.json({ success: true });
 }

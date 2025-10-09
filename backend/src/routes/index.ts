@@ -2,8 +2,9 @@ import { Router } from "express";
 import { z } from "zod";
 import { listCampaigns, createCampaign, getCampaignById } from "../controllers/campaigns.controller";
 import { listTemplates, createTemplate, getTemplateById } from "../controllers/templates.controller";
-import { listDomains } from "../controllers/domains.controller";
+import { listDomains, createDomain, getDomain, updateDomainStatus, deleteDomain } from "../controllers/domains.controller";
 import { getOverview } from "../controllers/analytics.controller";
+import { register, login, getProfile, updateProfile } from "../controllers/auth.controller";
 import { createDraft, getDraft } from "../services/drafts.service";
 import { sendMail } from "../services/mailer";
 import { logEmail } from "../services/email-logs.service";
@@ -19,8 +20,18 @@ api.post("/v1/templates", createTemplate);
 api.get("/v1/templates/:id", getTemplateById);
 
 api.get("/v1/domains", listDomains);
+api.post("/v1/domains", createDomain);
+api.get("/v1/domains/:id", getDomain);
+api.put("/v1/domains/:id/status", updateDomainStatus);
+api.delete("/v1/domains/:id", deleteDomain);
 
 api.get("/v1/analytics", getOverview);
+
+// Auth routes
+api.post("/v1/auth/register", register);
+api.post("/v1/auth/login", login);
+api.get("/v1/users/:userId/profile", getProfile);
+api.put("/v1/users/:userId/profile", updateProfile);
 
 const DraftSchema = z.object({
   name: z.string().min(1),

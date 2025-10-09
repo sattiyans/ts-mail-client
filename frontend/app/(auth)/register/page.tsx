@@ -25,10 +25,33 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("Registration attempt:", formData);
-    setIsLoading(false);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: formData.email, 
+          firstName: formData.firstName, 
+          lastName: formData.lastName 
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Success - show message about verification
+        alert(data.message || "Account created successfully. Please check your email for verification.");
+      } else {
+        // Error
+        alert(data.message || "Registration failed. Please try again.");
+      }
+    } catch (error) {
+      alert("Network error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {

@@ -1,11 +1,58 @@
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Globe, CheckCircle, AlertCircle, Clock, MoreHorizontal, RefreshCw } from "lucide-react";
-import { mockDomains } from "@/lib/mock-data";
+import { useState, useEffect } from "react";
+import { getJSON, postJSON } from "@/lib/api";
+import { useToast } from "@/lib/use-toast";
+
+type ApiDomain = {
+  id: string;
+  domain: string;
+  status: string;
+  verifiedAt?: string | null;
+  createdAt: string;
+};
 
 export default function DomainsPage() {
+  const [items, setItems] = useState<ApiDomain[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+
+  const fetchDomains = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getJSON<{ items: ApiDomain[] }>("/api/v1/domains");
+      setItems(res.items || []);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load domains");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDomains();
+  }, []);
+
+  const handleAddDomain = async (domain: string) => {
+    try {
+      const newDomain = await postJSON<ApiDomain>("/api/v1/domains", {
+        domain,
+        status: "pending",
+      });
+      setItems(prev => [newDomain, ...prev]);
+      toast.success("Domain added successfully");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to add domain");
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'verified':
@@ -41,38 +88,95 @@ export default function DomainsPage() {
     });
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-row items-center justify-between">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Domains</h2>
+            <p className="text-muted-foreground">
+              Manage your sending domains
+            </p>
+          </div>
+          <Button disabled>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Domain
+          </Button>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>All Domains</CardTitle>
+            <CardDescription>
+              Complete list of your sending domains
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-muted-foreground">Loading domains...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-row items-center justify-between">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Domains</h2>
+            <p className="text-muted-foreground">
+              Manage your sending domains
+            </p>
+          </div>
+          <Button disabled>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Domain
+          </Button>
+        </div>
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">Error Loading Domains</CardTitle>
+            <CardDescription>{error}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={fetchDomains}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-          <div className="flex flex-row items-center justify-between">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Domains</h2>
-              <p className="text-muted-foreground">
-                Manage your sending domains and verify their status
-              </p>
-            </div>
-            <div className="flex flex-row items-center space-x-2">
-              <Button variant="outline">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh Status
-              </Button>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Domain
-              </Button>
-            </div>
-          </div>
+      <div className="flex flex-row items-center justify-between">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Domains</h2>
+          <p className="text-muted-foreground">
+            Manage your sending domains
+          </p>
+        </div>
+        <Button onClick={() => {
+          const domain = prompt("Enter domain name:");
+          if (domain) handleAddDomain(domain);
+        }}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Domain
+        </Button>
+      </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Domains</CardTitle>
             <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockDomains.length}</div>
+            <div className="text-2xl font-bold">{items.length}</div>
             <p className="text-xs text-muted-foreground">
-              {mockDomains.filter(d => d.status === 'verified').length} verified
+              {items.filter(d => d.status === 'verified').length} verified
             </p>
           </CardContent>
         </Card>
@@ -84,10 +188,10 @@ export default function DomainsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {mockDomains.filter(d => d.status === 'verified').length}
+              {items.filter(d => d.status === 'verified').length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Ready for sending
+              Ready to send
             </p>
           </CardContent>
         </Card>
@@ -99,10 +203,25 @@ export default function DomainsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {mockDomains.filter(d => d.status === 'pending').length}
+              {items.filter(d => d.status === 'pending').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Awaiting verification
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Failed</CardTitle>
+            <AlertCircle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {items.filter(d => d.status === 'failed').length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Needs attention
             </p>
           </CardContent>
         </Card>
@@ -113,7 +232,7 @@ export default function DomainsPage() {
         <CardHeader>
           <CardTitle>All Domains</CardTitle>
           <CardDescription>
-            Complete list of your sending domains and their verification status
+            Complete list of your sending domains
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -122,22 +241,21 @@ export default function DomainsPage() {
               <TableRow>
                 <TableHead>Domain</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>DNS Records</TableHead>
                 <TableHead>Verified</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>Added</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockDomains.map((domain) => (
+              {items.map((domain) => (
                 <TableRow key={domain.id}>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <Globe className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="font-medium">{domain.name}</p>
+                        <p className="font-medium">{domain.domain}</p>
                         <p className="text-sm text-muted-foreground">
-                          {domain.name.includes('newsletter') ? 'Newsletter subdomain' : 'Primary domain'}
+                          {domain.status === 'verified' ? 'Ready to send' : 'Verification required'}
                         </p>
                       </div>
                     </div>
@@ -146,23 +264,6 @@ export default function DomainsPage() {
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(domain.status)}
                       {getStatusBadge(domain.status)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {domain.dnsRecords.map((record, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <Badge 
-                            variant={record.status === 'valid' ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {record.type}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {record.status === 'valid' ? '✓' : record.status === 'invalid' ? '✗' : '⏳'}
-                          </span>
-                        </div>
-                      ))}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -180,9 +281,11 @@ export default function DomainsPage() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-end space-x-1">
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -191,48 +294,68 @@ export default function DomainsPage() {
         </CardContent>
       </Card>
 
-      {/* DNS Setup Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>DNS Setup Instructions</CardTitle>
-          <CardDescription>
-            Follow these steps to verify your domain
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <h4 className="font-medium">1. SPF Record</h4>
-              <p className="text-sm text-muted-foreground">
-                Add this TXT record to your domain&apos;s DNS settings:
-              </p>
-              <div className="bg-muted p-3 rounded-md font-mono text-sm">
-                v=spf1 include:_spf.google.com ~all
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h4 className="font-medium">2. DKIM Record</h4>
-              <p className="text-sm text-muted-foreground">
-                Add this CNAME record to your domain&apos;s DNS settings:
-              </p>
-              <div className="bg-muted p-3 rounded-md font-mono text-sm">
-                mail._domainkey → mail.google.com
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h4 className="font-medium">3. DMARC Record</h4>
-              <p className="text-sm text-muted-foreground">
-                Add this TXT record to your domain&apos;s DNS settings:
-              </p>
-              <div className="bg-muted p-3 rounded-md font-mono text-sm">
-                v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Quick Actions */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Plus className="h-5 w-5" />
+              <span>Add Domain</span>
+            </CardTitle>
+            <CardDescription>
+              Add a new sending domain
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              className="w-full"
+              onClick={() => {
+                const domain = prompt("Enter domain name:");
+                if (domain) handleAddDomain(domain);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Domain
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Globe className="h-5 w-5" />
+              <span>DNS Setup</span>
+            </CardTitle>
+            <CardDescription>
+              Configure DNS records
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full">
+              <Globe className="mr-2 h-4 w-4" />
+              DNS Guide
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5" />
+              <span>Verify Domain</span>
+            </CardTitle>
+            <CardDescription>
+              Verify domain ownership
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full">
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Verify Now
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

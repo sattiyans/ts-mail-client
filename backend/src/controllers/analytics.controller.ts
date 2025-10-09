@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
+import { getAnalyticsOverviewSvc } from "../services/analytics.service";
 
 export async function getOverview(_req: Request, res: Response) {
-  return res.json({ overview: { sent: 0, opened: 0, clicked: 0, bounces: 0 } });
+  const analytics = await getAnalyticsOverviewSvc();
+  return res.json(analytics);
 }
 
 

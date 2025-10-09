@@ -6,18 +6,15 @@ import { Sun, Moon } from "lucide-react";
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(true); // Default to dark mode
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Check if there's a saved theme preference
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      setIsDark(savedTheme === 'dark');
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-    } else {
-      // Default to dark mode
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    }
+    // Only run on client side after hydration
+    setMounted(true);
+    
+    // Read the current theme from the DOM (set by inline script)
+    const isCurrentlyDark = document.documentElement.classList.contains('dark');
+    setIsDark(isCurrentlyDark);
   }, []);
 
   const toggleTheme = () => {
@@ -28,16 +25,33 @@ export function ThemeToggle() {
     
     if (newTheme) {
       document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
       localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
       localStorage.setItem('theme', 'light');
     }
+    
     // Re-enable transitions shortly after
     setTimeout(() => {
       document.documentElement.classList.remove('no-transition');
     }, 120);
   };
+
+  // Don't render until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        disabled
+      >
+        <Sun className="h-4 w-4" />
+      </Button>
+    );
+  }
 
   return (
     <Button

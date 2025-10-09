@@ -25,10 +25,28 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Apply saved theme ASAP (before hydration) to prevent flash + mismatch */}
+        {/* Apply saved theme IMMEDIATELY to prevent any hydration mismatch */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `!function(){try{var s=localStorage.getItem('theme'),p=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches,d=s?s==='dark':p;var e=document.documentElement.classList;e.toggle('dark',d)}catch(e){}}();`,
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('theme');
+                  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  var isDark = saved ? saved === 'dark' : prefersDark;
+                  
+                  // Apply immediately to prevent flash
+                  document.documentElement.classList.toggle('dark', isDark);
+                  
+                  // Also set a data attribute for additional safety
+                  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+                } catch (e) {
+                  // Fallback to dark mode if anything fails
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                }
+              })();
+            `,
           }}
         />
       </head>

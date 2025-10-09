@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { pixelId: string } }
+  { params }: { params: Promise<{ pixelId: string }> }
 ) {
-  const { pixelId } = params;
+  const { pixelId } = await params;
   
   try {
     // Forward the request to the backend

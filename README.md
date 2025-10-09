@@ -50,17 +50,24 @@ Built with Next.js (App Router) + ShadCN UI + Prisma + SendGrid/Nodemailer.
 ## 📁 Project Structure
 
 ```
-/app
-  /dashboard          # Main dashboard
-  /domains           # Domain management
-  /templates         # Email templates
-  /campaigns         # Campaign management
-  /analytics         # Analytics & reports
-  /settings          # User settings
-/components          # Reusable UI components
-/lib                 # Utility functions & backend logic
-/types               # TypeScript type definitions
-/prisma              # Database schema & migrations
+/frontend              # Next.js frontend application
+  /app                 # App Router pages
+    /(app)             # Main app pages (dashboard, campaigns, etc.)
+    /(auth)            # Authentication pages (login, register)
+  /components          # Reusable UI components
+  /lib                 # Frontend utilities & API helpers
+  /types               # TypeScript type definitions
+
+/backend               # Express.js backend API
+  /src
+    /controllers       # API route controllers
+    /services          # Business logic & database operations
+    /routes            # API route definitions
+    /db                # Database connection & schema
+  /db
+    schema.sql         # PostgreSQL database schema
+
+/shared                # Shared types and utilities (optional)
 ```
 
 ## 🚀 Getting Started
@@ -71,17 +78,47 @@ Built with Next.js (App Router) + ShadCN UI + Prisma + SendGrid/Nodemailer.
    ```
 
 2. **Set up environment variables:**
+   
+   **Frontend** (`frontend/.env.local`):
    ```bash
-   cp env.example .env.local
-   # Edit .env.local with your actual values
+   cp frontend/env.example frontend/.env.local
+   # Edit frontend/.env.local with your actual values
+   NEXT_PUBLIC_API_URL=http://localhost:4000
+   ```
+   
+   **Backend** (`backend/.env`):
+   ```bash
+   # Create backend/.env with your database and SMTP settings
+   DATABASE_URL=postgresql://username:password@localhost:5432/ts_mail_client
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASS=your-app-password
    ```
 
-3. **Run the development server:**
+3. **Run both frontend and backend servers:**
    ```bash
    npm run dev
    ```
+   
+   This will start:
+   - **Frontend**: http://localhost:3000 (Next.js)
+   - **Backend**: http://localhost:4000 (Express API)
 
-4. **Open [http://localhost:3000](http://localhost:3000)** to see the app
+4. **Individual server commands:**
+   ```bash
+   # Run only frontend
+   npm run dev:frontend
+   
+   # Run only backend  
+   npm run dev:backend
+   
+   # Build both
+   npm run build
+   
+   # Start production servers
+   npm run start
+   ```
 
 ## 📋 Development Phases
 

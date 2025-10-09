@@ -4,16 +4,77 @@ import { listCampaigns, createCampaign, getCampaignById } from "../controllers/c
 import { listTemplates, createTemplate, getTemplateById } from "../controllers/templates.controller";
 import { listDomains, createDomain, getDomain, updateDomainStatus, deleteDomain } from "../controllers/domains.controller";
 import { getOverview } from "../controllers/analytics.controller";
-import { register, login, getProfile, updateProfile } from "../controllers/auth.controller";
-import { createDraft, getDraft } from "../services/drafts.service";
-import { sendMail } from "../services/mailer";
-import { logEmail } from "../services/email-logs.service";
+import { register, login, getProfile, updateProfile, verifyMagicLink } from "../controllers/auth.controller";
+import { scheduleCampaign, getScheduledCampaigns, cancelScheduledCampaign } from "../services/scheduler.service";
 
 export const api = Router();
 
 api.get("/v1/campaigns", listCampaigns);
 api.post("/v1/campaigns", createCampaign);
 api.get("/v1/campaigns/:id", getCampaignById);
+api.post("/v1/campaigns/:id/send", async (req, res) => {
+  const { id } = req.params;
+  const parsed = z.object({
+    recipients: z.array(z.object({
+      email: z.string().email(),
+      variables: z.record(z.string())
+    })),
+    attachments: z.array(z.object({
+      filename: z.string(),
+      contentBase64: z.string(),
+      contentType: z.string().optional()
+    })).optional()
+  }).safeParse(req.body);
+  
+  if (!parsed.success) {
+    return res.status(400).json({ error: "INVALID_BODY", issues: parsed.error.flatten() });
+  }
+  
+  try {
+    const result = await executeCampaign({
+      campaignId: id,
+      recipients: parsed.data.recipients,
+      attachments: parsed.data.attachments
+    });
+    return res.json(result);
+  } catch (e: any) {
+    return res.status(500).json({ error: "SEND_FAILED", message: e?.message || "unknown" });
+  }
+});
+api.post("/v1/campaigns/:id/schedule", async (req, res) => {
+  const { id } = req.params;
+  const parsed = z.object({
+    scheduledAt: z.string().datetime()
+  }).safeParse(req.body);
+  
+  if (!parsed.success) {
+    return res.status(400).json({ error: "INVALID_BODY", issues: parsed.error.flatten() });
+  }
+  
+  try {
+    await scheduleCampaign(id, parsed.data.scheduledAt);
+    return res.json({ success: true });
+  } catch (e: any) {
+    return res.status(500).json({ error: "SCHEDULE_FAILED", message: e?.message || "unknown" });
+  }
+});
+api.get("/v1/campaigns/scheduled", async (req, res) => {
+  try {
+    const campaigns = await getScheduledCampaigns();
+    return res.json({ items: campaigns });
+  } catch (e: any) {
+    return res.status(500).json({ error: "FAILED_TO_GET_SCHEDULED", message: e?.message || "unknown" });
+  }
+});
+api.post("/v1/campaigns/:id/cancel", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await cancelScheduledCampaign(id);
+    return res.json({ success: true });
+  } catch (e: any) {
+    return res.status(500).json({ error: "CANCEL_FAILED", message: e?.message || "unknown" });
+  }
+});
 
 api.get("/v1/templates", listTemplates);
 api.post("/v1/templates", createTemplate);
@@ -24,12 +85,70 @@ api.post("/v1/domains", createDomain);
 api.get("/v1/domains/:id", getDomain);
 api.put("/v1/domains/:id/status", updateDomainStatus);
 api.delete("/v1/domains/:id", deleteDomain);
+api.post("/v1/domains/:id/verify", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await verifyDomainAndUpdate(id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: "VERIFICATION_FAILED", message: error.message });
+  }
+});
+api.get("/v1/domains/:domain/instructions", async (req, res) => {
+  const { domain } = req.params;
+  try {
+    const instructions = await generateDomainVerificationInstructions(domain);
+    res.json(instructions);
+  } catch (error: any) {
+    res.status(500).json({ error: "FAILED_TO_GENERATE_INSTRUCTIONS", message: error.message });
+  }
+});
 
 api.get("/v1/analytics", getOverview);
+
+// Tracking routes
+api.get("/track/pixel/:pixelId", async (req, res) => {
+  const { pixelId } = req.params;
+  try {
+    await trackEmailOpen(pixelId);
+    // Return a 1x1 transparent pixel
+    const pixel = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+      'base64'
+    );
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(pixel);
+  } catch (error) {
+    res.status(404).send('Not found');
+  }
+});
+
+api.get("/track/click/:campaignId/:email", async (req, res) => {
+  const { campaignId, email } = req.params;
+  const { url } = req.query;
+  try {
+    await trackEmailClick(campaignId, decodeURIComponent(email), url as string);
+    res.redirect(url as string || '/');
+  } catch (error) {
+    res.status(404).send('Not found');
+  }
+});
+
+api.get("/v1/campaigns/:id/tracking", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const stats = await getTrackingStats(id);
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to get tracking stats" });
+  }
+});
 
 // Auth routes
 api.post("/v1/auth/register", register);
 api.post("/v1/auth/login", login);
+api.get("/v1/auth/verify", verifyMagicLink);
 api.get("/v1/users/:userId/profile", getProfile);
 api.put("/v1/users/:userId/profile", updateProfile);
 

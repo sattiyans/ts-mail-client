@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationDropdown } from "@/components/notification-dropdown";
+import { useAuth } from "@/lib/auth-context";
 import {
   LayoutDashboard,
   Globe,
@@ -32,6 +33,7 @@ import {
 export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
   const pageTitle = pathname.split("/").pop() || "Dashboard";
+  const { user, logout } = useAuth();
 
   const getPageTitle = (path: string) => {
     const titles: { [key: string]: string } = {
@@ -87,7 +89,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               <Avatar className="h-8 w-8">
                 <AvatarImage src="/avatars/01.png" alt="User" />
                 <AvatarFallback className="bg-muted text-muted-foreground">
-                  <User className="h-4 w-4" />
+                  {user ? `${user.firstName[0]}${user.lastName[0]}` : <User className="h-4 w-4" />}
                 </AvatarFallback>
               </Avatar>
               <span className="sr-only">User menu</span>
@@ -96,9 +98,11 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">John Doe</p>
+                <p className="text-sm font-medium leading-none">
+                  {user ? `${user.firstName} ${user.lastName}` : 'User'}
+                </p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  john@example.com
+                  {user?.email || 'user@example.com'}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -114,7 +118,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               <span>Help & Support</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={logout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>

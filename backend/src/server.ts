@@ -11,6 +11,7 @@ import {
   corsOptions 
 } from "./middleware/security";
 import { errorHandler, notFound } from "./middleware/error-handler";
+import { startScheduler } from "./services/scheduler.service";
 
 dotenv.config();
 
@@ -57,6 +58,9 @@ app.listen(PORT, () => {
   console.log(`🚀 Backend server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/v1/health`);
+  
+  // Start the campaign scheduler
+  startScheduler();
 });
 
 

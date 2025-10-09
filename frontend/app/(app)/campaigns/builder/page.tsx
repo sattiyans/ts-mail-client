@@ -7,8 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { diffVariableSets } from "@/lib/template";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/lib/use-toast";
+import { Send, Clock, Loader2, Calendar } from "lucide-react";
 
 type Draft = {
   name: string;
@@ -22,7 +26,12 @@ type Draft = {
 
 export default function CampaignBuilderPage() {
   const router = useRouter();
+  const toast = useToast();
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [sendResults, setSendResults] = useState<any>(null);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
 
   useEffect(() => {
     try {
@@ -45,6 +54,101 @@ export default function CampaignBuilderPage() {
     return draft ? diffVariableSets(draft.variables, draft.headers) : { missing: [], extras: [] };
   }, [draft]);
 
+  const handleSendCampaign = async () => {
+    if (!draft || diff.missing.length > 0) return;
+    
+    setIsSending(true);
+    try {
+      // First create the campaign
+      const campaignResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: draft.name,
+          subject: draft.subject,
+          status: 'draft'
+        })
+      });
+      
+      const campaign = await campaignResponse.json();
+      
+      // Prepare recipients data
+      const recipients = draft.rows.map(row => ({
+        email: row.email || row.Email || Object.values(row)[0], // Assume first column or 'email' column
+        variables: row
+      }));
+      
+      // Send the campaign
+      const sendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/campaigns/${campaign.id}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients,
+          subject: draft.subject,
+          content: draft.content
+        })
+      });
+      
+      const results = await sendResponse.json();
+      setSendResults(results);
+      
+      if (results.sent > 0) {
+        toast.success(`Campaign sent successfully! ${results.sent} emails sent, ${results.failed} failed.`);
+        // Clear the draft
+        sessionStorage.removeItem("campaign_draft");
+        router.push("/campaigns");
+      } else {
+        toast.error(`Campaign failed to send. ${results.errors?.[0]?.error || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      toast.error(`Failed to send campaign: ${error.message}`);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleScheduleCampaign = async () => {
+    if (!draft || diff.missing.length > 0 || !scheduledAt) return;
+    
+    setIsScheduling(true);
+    try {
+      // First create the campaign
+      const campaignResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: draft.name,
+          subject: draft.subject,
+          status: 'draft'
+        })
+      });
+      
+      const campaign = await campaignResponse.json();
+      
+      // Schedule the campaign
+      const scheduleResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/campaigns/${campaign.id}/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduledAt: new Date(scheduledAt).toISOString()
+        })
+      });
+      
+      if (scheduleResponse.ok) {
+        toast.success(`Campaign scheduled for ${new Date(scheduledAt).toLocaleString()}`);
+        // Clear the draft
+        sessionStorage.removeItem("campaign_draft");
+        router.push("/campaigns");
+      } else {
+        toast.error("Failed to schedule campaign");
+      }
+    } catch (error: any) {
+      toast.error(`Failed to schedule campaign: ${error.message}`);
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
   if (!draft) {
     return (
       <div className="space-y-4">
@@ -65,7 +169,76 @@ export default function CampaignBuilderPage() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => router.push("/campaigns")}>Cancel</Button>
           <Button disabled={diff.missing.length > 0}>Save Draft</Button>
-          <Button disabled={diff.missing.length > 0}>Schedule/Send</Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button disabled={diff.missing.length > 0 || isSending}>
+                {isSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                Send Now
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Send Campaign</DialogTitle>
+                <DialogDescription>
+                  This will send emails to {draft?.rows.length || 0} recipients. This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p><strong>Campaign:</strong> {draft?.name}</p>
+                  <p><strong>Recipients:</strong> {draft?.rows.length || 0}</p>
+                  <p><strong>Subject:</strong> {draft?.subject}</p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline">Cancel</Button>
+                  <Button onClick={handleSendCampaign} disabled={isSending}>
+                    {isSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                    Confirm Send
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" disabled={diff.missing.length > 0 || isScheduling}>
+                {isScheduling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Calendar className="h-4 w-4 mr-2" />}
+                Schedule
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Schedule Campaign</DialogTitle>
+                <DialogDescription>
+                  Schedule this campaign to be sent later to {draft?.rows.length || 0} recipients.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="schedule-time">Schedule Date & Time</Label>
+                  <Input
+                    id="schedule-time"
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <p><strong>Campaign:</strong> {draft?.name}</p>
+                  <p><strong>Recipients:</strong> {draft?.rows.length || 0}</p>
+                  <p><strong>Subject:</strong> {draft?.subject}</p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline">Cancel</Button>
+                  <Button onClick={handleScheduleCampaign} disabled={isScheduling || !scheduledAt}>
+                    {isScheduling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Calendar className="h-4 w-4 mr-2" />}
+                    Schedule Campaign
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

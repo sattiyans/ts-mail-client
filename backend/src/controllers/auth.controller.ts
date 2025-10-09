@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createUserSvc, getUserByEmailSvc, getUserByIdSvc, updateUserSvc } from "../services/users.service";
+import { sendMagicLinkEmail } from "../services/magic-link.service";
+import { generateToken, verifyMagicLinkToken } from "../services/jwt.service";
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -28,7 +30,9 @@ export async function register(req: Request, res: Response) {
     // Create new user
     const user = await createUserSvc(parsed.data);
     
-    // For now, just return success (magic link auth would be implemented here)
+    // Send magic link email
+    await sendMagicLinkEmail(user.email, user.firstName, true);
+    
     return res.status(201).json({ 
       success: true, 
       message: "User created successfully. Please check your email for verification link.",
@@ -56,7 +60,9 @@ export async function login(req: Request, res: Response) {
       return res.status(404).json({ error: "USER_NOT_FOUND", message: "User not found" });
     }
 
-    // For now, just return success (magic link auth would be implemented here)
+    // Send magic link email
+    await sendMagicLinkEmail(user.email, user.firstName, false);
+
     return res.status(200).json({ 
       success: true, 
       message: "Please check your email for the magic link.",
@@ -95,6 +101,43 @@ const UpdateProfileSchema = z.object({
   lastName: z.string().min(1).optional(),
   email: z.string().email().optional(),
 });
+
+export async function verifyMagicLink(req: Request, res: Response) {
+  const { token } = req.query;
+  
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ error: "MISSING_TOKEN" });
+  }
+
+  try {
+    const payload = verifyMagicLinkToken(token);
+    if (!payload) {
+      return res.status(400).json({ error: "INVALID_TOKEN", message: "Token is invalid or expired" });
+    }
+
+    const user = await getUserByEmailSvc(payload.email);
+    if (!user) {
+      return res.status(404).json({ error: "USER_NOT_FOUND" });
+    }
+
+    // Generate JWT token for authenticated session
+    const jwtToken = generateToken({ userId: user.id, email: user.email });
+
+    return res.status(200).json({
+      success: true,
+      message: "Authentication successful",
+      token: jwtToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      }
+    });
+  } catch (e: any) {
+    return res.status(500).json({ error: "VERIFICATION_FAILED", message: e?.message || "unknown" });
+  }
+}
 
 export async function updateProfile(req: Request, res: Response) {
   const { userId } = req.params;

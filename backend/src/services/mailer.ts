@@ -1,4 +1,5 @@
 import nodemailer, { Transporter } from "nodemailer";
+import { createTrackingPixel } from "./tracking.service";
 
 let transporter: Transporter | null = null;
 
@@ -27,10 +28,32 @@ export async function sendMail(opts: {
   subject: string;
   html: string;
   attachments?: MailAttachment[];
+  campaignId?: string;
+  enableTracking?: boolean;
 }) {
   const tx = getTransporter();
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@example.com";
-  return tx.sendMail({ from, to: opts.to, subject: opts.subject, html: opts.html, attachments: opts.attachments });
+  
+  let finalHtml = opts.html;
+  
+  // Add tracking pixel if enabled and campaignId is provided
+  if (opts.enableTracking && opts.campaignId) {
+    try {
+      const pixel = await createTrackingPixel(opts.campaignId, opts.to);
+      const trackingPixel = `<img src="${pixel.pixelUrl}" width="1" height="1" style="display:none;" alt="" />`;
+      finalHtml += trackingPixel;
+    } catch (error) {
+      console.warn('Failed to add tracking pixel:', error);
+    }
+  }
+  
+  return tx.sendMail({ 
+    from, 
+    to: opts.to, 
+    subject: opts.subject, 
+    html: finalHtml, 
+    attachments: opts.attachments 
+  });
 }
 
 

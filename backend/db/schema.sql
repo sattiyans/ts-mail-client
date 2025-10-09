@@ -42,9 +42,23 @@ create table if not exists email_logs (
   recipient_email text not null,
   status text not null,
   opened boolean not null default false,
+  opened_at timestamptz,
   clicked boolean not null default false,
+  clicked_at timestamptz,
   bounced boolean not null default false,
+  bounced_at timestamptz,
+  unsubscribed boolean not null default false,
+  unsubscribed_at timestamptz,
+  pixel_id text unique,
   ts timestamptz not null default now()
+);
+
+create table if not exists email_clicks (
+  id bigserial primary key,
+  campaign_id uuid references campaigns(id) on delete cascade,
+  recipient_email text not null,
+  url text not null,
+  clicked_at timestamptz not null default now()
 );
 
 create table if not exists drafts (

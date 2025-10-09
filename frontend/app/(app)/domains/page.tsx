@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Globe, CheckCircle, AlertCircle, Clock, MoreHorizontal, RefreshCw } from "lucide-react";
+import { Plus, Globe, CheckCircle, AlertCircle, Clock, MoreHorizontal, RefreshCw, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getJSON, postJSON } from "@/lib/api";
 import { useToast } from "@/lib/use-toast";
@@ -50,6 +50,20 @@ export default function DomainsPage() {
       toast.success("Domain added successfully");
     } catch (e: any) {
       toast.error(e?.message || "Failed to add domain");
+    }
+  };
+
+  const handleVerifyDomain = async (domainId: string) => {
+    try {
+      const result = await postJSON(`/api/v1/domains/${domainId}/verify`);
+      if (result.isValid) {
+        toast.success("Domain verified successfully!");
+        fetchDomains(); // Refresh the list
+      } else {
+        toast.error(`Domain verification failed: ${result.errors.join(', ')}`);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to verify domain");
     }
   };
 
@@ -282,6 +296,16 @@ export default function DomainsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end space-x-1">
+                      {domain.status === 'pending' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleVerifyDomain(domain.id)}
+                        >
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                          Verify
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>

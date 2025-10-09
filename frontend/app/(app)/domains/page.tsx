@@ -55,7 +55,7 @@ export default function DomainsPage() {
 
   const handleVerifyDomain = async (domainId: string) => {
     try {
-      const result = await postJSON(`/api/v1/domains/${domainId}/verify`);
+      const result = await postJSON<{ isValid: boolean; errors: string[] }>(`/api/v1/domains/${domainId}/verify`);
       if (result.isValid) {
         toast.success("Domain verified successfully!");
         fetchDomains(); // Refresh the list

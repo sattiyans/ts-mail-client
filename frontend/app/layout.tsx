@@ -24,9 +24,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Apply saved theme IMMEDIATELY to prevent any hydration mismatch */}
+        {/* Theme script - runs before React hydration */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -36,13 +36,16 @@ export default function RootLayout({
                   var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
                   var isDark = saved ? saved === 'dark' : prefersDark;
                   
-                  // Apply immediately to prevent flash
-                  document.documentElement.classList.toggle('dark', isDark);
-                  
-                  // Also set a data attribute for additional safety
-                  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+                  // Apply theme immediately
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.setAttribute('data-theme', 'light');
+                  }
                 } catch (e) {
-                  // Fallback to dark mode if anything fails
+                  // Fallback to dark mode
                   document.documentElement.classList.add('dark');
                   document.documentElement.setAttribute('data-theme', 'dark');
                 }

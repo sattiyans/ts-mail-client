@@ -1,6 +1,18 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Theme fallback - ensures dark mode is applied even if JS fails */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    @apply dark;
+  }
+}
+
+/* Default to dark mode if no preference is set */
+html:not([data-theme]) {
+  @apply dark;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

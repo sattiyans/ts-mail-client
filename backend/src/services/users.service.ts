@@ -7,6 +7,12 @@ export type UserInsert = {
   password?: string; // Optional for magic link auth
 };
 
+export type UserUpdate = {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+};
+
 export type User = {
   id: string;
   email: string;
@@ -46,7 +52,7 @@ export async function getUserByIdSvc(id: string) {
   return r.rows[0] || null;
 }
 
-export async function updateUserSvc(id: string, updates: Partial<UserInsert>) {
+export async function updateUserSvc(id: string, updates: UserUpdate) {
   const fields = [];
   const values = [];
   let paramCount = 1;

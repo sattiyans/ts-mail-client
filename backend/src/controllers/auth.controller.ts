@@ -108,7 +108,13 @@ export async function updateProfile(req: Request, res: Response) {
   }
 
   try {
-    const user = await updateUserSvc(userId, parsed.data);
+    // Filter out undefined values to satisfy exactOptionalPropertyTypes
+    const updates: { firstName?: string; lastName?: string; email?: string } = {};
+    if (parsed.data.firstName !== undefined) updates.firstName = parsed.data.firstName;
+    if (parsed.data.lastName !== undefined) updates.lastName = parsed.data.lastName;
+    if (parsed.data.email !== undefined) updates.email = parsed.data.email;
+    
+    const user = await updateUserSvc(userId, updates);
     if (!user) {
       return res.status(404).json({ error: "USER_NOT_FOUND" });
     }

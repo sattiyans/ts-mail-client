@@ -4,13 +4,13 @@
 /* Theme fallback - ensures dark mode is applied even if JS fails */
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) {
-    @apply dark;
+    color-scheme: dark;
   }
 }
 
 /* Default to dark mode if no preference is set */
 html:not([data-theme]) {
-  @apply dark;
+  color-scheme: dark;
 }
 
 @custom-variant dark (&:is(.dark *));

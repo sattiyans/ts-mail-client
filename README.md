@@ -96,7 +96,16 @@ Built with Next.js (App Router) + ShadCN UI + Prisma + SendGrid/Nodemailer.
    SMTP_PASS=your-app-password
    ```
 
-3. **Run both frontend and backend servers:**
+3. **Set up database:**
+   ```bash
+   # Create PostgreSQL database
+   createdb ts_mail_client
+   
+   # Apply schema
+   psql ts_mail_client -f backend/db/schema.sql
+   ```
+
+4. **Run both frontend and backend servers:**
    ```bash
    npm run dev
    ```
@@ -105,7 +114,7 @@ Built with Next.js (App Router) + ShadCN UI + Prisma + SendGrid/Nodemailer.
    - **Frontend**: http://localhost:3000 (Next.js)
    - **Backend**: http://localhost:4000 (Express API)
 
-4. **Individual server commands:**
+5. **Individual server commands:**
    ```bash
    # Run only frontend
    npm run dev:frontend
@@ -119,6 +128,16 @@ Built with Next.js (App Router) + ShadCN UI + Prisma + SendGrid/Nodemailer.
    # Start production servers
    npm run start
    ```
+
+## 🚀 Production Deployment
+
+For production deployment to Vercel (frontend) + Render (backend), see the detailed [DEPLOYMENT.md](./DEPLOYMENT.md) guide.
+
+**Quick Deploy:**
+1. **Database**: Create PostgreSQL on Render
+2. **Backend**: Deploy to Render (Node.js service)  
+3. **Frontend**: Deploy to Vercel (Next.js app)
+4. **Connect**: Update environment variables to link services
 
 ## 📋 Development Phases
 
